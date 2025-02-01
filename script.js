@@ -133,8 +133,8 @@ class SkillTreeSimulator {
   async loadSkillData() {
     try {
       const [skill1Response, skill2Response] = await Promise.all([
-        fetch('/awaken-skill-tree/assets/skill1.json'),
-        fetch('/awaken-skill-tree/assets/skill2.json')
+        fetch('https://raw.githubusercontent.com/alfm201/awaken-skill-tree/main/assets/skill1.json'),
+        fetch('https://raw.githubusercontent.com/alfm201/awaken-skill-tree/main/assets/skill2.json')
       ]);
       
       const skill1Data = await skill1Response.json();
@@ -1878,7 +1878,7 @@ class SkillTreeSimulator {
       y: parseInt(node.COOP_Y) || 0,
       width: parseInt(node.OBJECT_SIZE_X) || 0,
       height: parseInt(node.OBJECT_SIZE_Y) || 0,
-      imageUrl: `/awaken-skill-tree/assets/${node.IMAGE_FILENAME}`,
+      imageUrl: `https://raw.githubusercontent.com/alfm201/awaken-skill-tree/main/assets/${node.IMAGE_FILENAME}`,
       imageClip: {
         x: parseInt(node.IMAGE_X) || 0,
         y: parseInt(node.IMAGE_Y) || 0,
