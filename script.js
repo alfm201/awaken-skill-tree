@@ -1,4 +1,4 @@
-console.log('Loaded version 1.0.12');
+console.log('Loaded version 1.0.13');
 
 class SkillTreeSimulator {
   constructor() {
@@ -6,7 +6,7 @@ class SkillTreeSimulator {
     const currentUrl = window.location.href;
     this.isGitHubPages = currentUrl.includes('alfm201.github.io/awaken-skill-tree');
     this.isLocalFile = currentUrl.startsWith('file://');
-    
+
     if (this.isGitHubPages) {
       this.baseUrl = 'https://raw.githubusercontent.com/alfm201/awaken-skill-tree/main/assets';
     } else if (this.isLocalFile) {
@@ -41,7 +41,7 @@ class SkillTreeSimulator {
     this.statsContent = document.querySelector('.stats-content');
     this.tabs = document.querySelectorAll('.tab');
     this.currentTab = 'all';
-    
+
     // 포인트 초기화
     this.firstAwakenPoints = {
       total: 138,
@@ -51,20 +51,20 @@ class SkillTreeSimulator {
       total: 115,
       used: 0
     };
-    
+
     this.nodes = [];
     this.nodeMap = new Map();  // 노드 ID를 키로 하는 Map
     this.linesMap = new Map(); // 라인 ID를 키로 하는 Map
     this.adjList = new Map();  // 인접 리스트 추가
     this.links = [];
     this.jobId = "24"; // 기본 직업 ID (하이랜더)
-    
+
     // 트리 경계값 캐시 초기화
     this._treeBounds = null;
-    
+
     // 우클릭 드래그 상태 추가
     this.isRightDragging = false;
-    
+
     // SVG 요소 초기화
     this.svg = d3.select("#skillTreeSvg")
       .on('contextmenu', (event) => {
@@ -89,14 +89,14 @@ class SkillTreeSimulator {
         this.hideTooltip();  // 터치 시작 시 툴크 숨기기
       });
     this.container = this.svg.append("g");
-    
+
     // defs 요소 초기화
     let defs = this.svg.select('defs');
     if (defs.empty()) {
       defs = this.svg.append('defs');
     }
     this.defs = defs;
-    
+
     // 줌 기능 초기화
     this.zoom = d3.zoom()
       .scaleExtent([0.02, 10])
@@ -107,23 +107,23 @@ class SkillTreeSimulator {
           return false;
         }
         return !event.ctrlKey && !event.button && (
-          event.type === 'wheel' || 
+          event.type === 'wheel' ||
           event.type === 'mousedown' ||
           event.type === 'mousemove' ||
           event.type === 'mouseup' ||
-          event.type === 'touchstart' || 
+          event.type === 'touchstart' ||
           event.type === 'touchmove' ||
           event.type === 'touchend'
         );
       });
-    
+
     this.svg
       .call(this.zoom)
       .on('dblclick.zoom', null);
-    
+
     // 이벤트 리스너 설정
     this.setupEventListeners();
-    
+
     // SVG 크기 설정
     this.updateSvgSize();
     window.addEventListener('resize', () => {
@@ -133,16 +133,16 @@ class SkillTreeSimulator {
         .attr("width", width)
         .attr("height", height);
     });
-    
+
     // 내부적인 URL 변경인지 추적하기 위한 플래그
     this.isInternalHashChange = false;
-    
+
     // hashchange 이벤트 핸들러
     window.addEventListener('hashchange', () => this.handleHashChange());
-    
+
     // URL에서 상태 불러오기
     this.loadFromURL();
-    
+
     // 초기 시각화 및 중앙 정렬
     this.initializeSimulator().then(() => {
       // 스킬 데이터 로드 후 setupStatsDisplay 호출
@@ -152,26 +152,39 @@ class SkillTreeSimulator {
 
   async loadSkillData() {
     try {
-      let skill1Url, skill2Url;
-      
-      if (this.isGitHubPages) {
-        skill1Url = `${this.baseUrl}/skill1.json`;
-        skill2Url = `${this.baseUrl}/skill2.json`;
-      } else if (this.isLocalFile) {
-        skill1Url = `${this.baseUrl}/skill1.json`;
-        skill2Url = `${this.baseUrl}/skill2.json`;
-      } else {
-        skill1Url = '/json/skill1.json';
-        skill2Url = '/json/skill2.json';
-      }
+      let skill1Data, skill2Data;
 
-      const [skill1Response, skill2Response] = await Promise.all([
-        fetch(skill1Url),
-        fetch(skill2Url)
-      ]);
-      
-      const skill1Data = await skill1Response.json();
-      const skill2Data = await skill2Response.json();
+      if (this.isGitHubPages) {
+        const [skill1Response, skill2Response] = await Promise.all([
+          fetch(`${this.baseUrl}/skill1.json`),
+          fetch(`${this.baseUrl}/skill2.json`)
+        ]);
+        skill1Data = await skill1Response.json();
+        skill2Data = await skill2Response.json();
+      } else if (this.isLocalFile) {
+        // 로컬 JavaScript 데이터 파일 로드
+        try {
+          await this.loadJavaScriptFile('./assets/local_skill1.js');
+          await this.loadJavaScriptFile('./assets/local_skill2.js');
+
+          // 전역 변수에서 데이터 가져오기
+          if (typeof window.skill1Data === 'undefined' || typeof window.skill2Data === 'undefined') {
+            throw new Error('스킬 데이터를 찾을 수 없습니다. local_skill1.js와 local_skill2.js 파일을 확인해주세요.');
+          }
+
+          skill1Data = window.skill1Data;
+          skill2Data = window.skill2Data;
+        } catch (error) {
+          throw new Error(`로컬 데이터 파일 로드 실패: ${error.message}`);
+        }
+      } else {
+        const [skill1Response, skill2Response] = await Promise.all([
+          fetch('/json/skill1.json'),
+          fetch('/json/skill2.json')
+        ]);
+        skill1Data = await skill1Response.json();
+        skill2Data = await skill2Response.json();
+      }
 
       // 직업 목록 추출 (시작 노드의 툴팁에서)
       const startNode = skill1Data.find(node => node.INSTANCEID === '101001');
@@ -186,13 +199,13 @@ class SkillTreeSimulator {
 
         this.setupJobSelector(jobList);
       }
-      
+
       this.nodes = [];
       this.nodeMap.clear();  // 노드 Map 초기화
       this.linesMap.clear(); // 라인 Map 초기화
       this.adjList.clear();  // 인접 리스트 초기화
       this._skill1MaxY = null;
-      
+
       // 데이터 처리 함수
       const processNodes = (data) => {
         if (Array.isArray(data)) {
@@ -244,31 +257,45 @@ class SkillTreeSimulator {
       // 데이터 처리
       processNodes(skill1Data);
       processNodes(skill2Data);
-      
+
       // 타입별로 정렬 (배경 -> 라인 -> 노드 순서로 그리기 위해)
       this.nodes.sort((a, b) => {
         const typeOrder = { background: 0, line: 1, node: 2 };
         return typeOrder[a.type] - typeOrder[b.type];
       });
-      
+
       if (this.nodes.length === 0) {
         throw new Error('No valid nodes loaded');
       }
-      
+
       // 데이터 로드 시 경계값 캐시 초기화
       this._treeBounds = null;
-      
+
       // skill1MaxY 계산 (데이터 로드 시 한 번만 계산)
       this.getSkill1MaxY();
-      
+
       // 시각화 업데이트
       this.updateVisuals();
       this.centerTree();
-      
+
     } catch (error) {
       console.error('스킬 데이터 로드 중 오류 발생:', error);
-      this.showNotification('스킬 데이터를 불러오는데 실패했습니다.', 'error');
+      this.showNotification('스킬 데이터를 불러오는데 실패했습니다. ' + error.message, 'error');
     }
+  }
+
+  // JavaScript 파일 동적 로드
+  loadJavaScriptFile(filePath) {
+    return new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = filePath;
+      script.onload = () => {
+        // 스크립트 로드 완료 후 약간의 지연을 주어 실행 보장
+        setTimeout(resolve, 100);
+      };
+      script.onerror = () => reject(new Error(`${filePath} 파일을 찾을 수 없습니다.`));
+      document.head.appendChild(script);
+    });
   }
 
   setupJobSelector(jobList) {
@@ -301,13 +328,13 @@ class SkillTreeSimulator {
   async initializeSimulator() {
     try {
       this.showLoadingIndicator();  // 로딩 인디케이터 표시
-      
+
       // 데이터 로드 및 초기 설정
       await this.loadSkillData();  // 스킬 데이터 로드 대기
-      
+
       // SVG 요소들 미리 생성
       this.defs.selectAll('*').remove();  // defs 초기화
-      
+
       // 유니크한 이미지 파일 목록 추출 및 심볼 미리 생성
       const uniqueImages = [...new Set(this.nodes.map(node => node.imageUrl))];
       const symbols = this.defs.selectAll('symbol')
@@ -371,10 +398,10 @@ class SkillTreeSimulator {
 
       // URL에서 상태 로드
       this.loadFromURL();
-      
+
       // 트리 경계값 미리 계산
       this._treeBounds = this.calculateTreeBounds();
-      
+
       // 모든 준비가 끝난 후에 시각화 시작
       await new Promise(resolve => {
         requestAnimationFrame(() => {
@@ -435,13 +462,13 @@ class SkillTreeSimulator {
   updateSvgSize() {
     const width = window.innerWidth;
     const height = window.innerHeight;
-    
+
     this.svg
       .attr("width", width)
       .attr("height", height)
       .attr("viewBox", "0 0 1920 1080")
       .attr("preserveAspectRatio", "xMidYMid meet");
-    
+
     if (!this.isInitialized) {
       requestAnimationFrame(() => {
         this.centerTree();
@@ -457,11 +484,11 @@ class SkillTreeSimulator {
     }
 
     // 캐시된 경계값이 있고 유효하면 사용
-    if (this._treeBounds && 
-        !isNaN(this._treeBounds.minX) && 
-        !isNaN(this._treeBounds.maxX) && 
-        !isNaN(this._treeBounds.minY) && 
-        !isNaN(this._treeBounds.maxY)) {
+    if (this._treeBounds &&
+      !isNaN(this._treeBounds.minX) &&
+      !isNaN(this._treeBounds.maxX) &&
+      !isNaN(this._treeBounds.minY) &&
+      !isNaN(this._treeBounds.maxY)) {
       const bounds = this._treeBounds;
       this.applyTreeTransform(bounds);
       return;
@@ -498,7 +525,7 @@ class SkillTreeSimulator {
       minY: bounds1.minY,
       maxY: bounds2.maxY + skill1MaxY  // 트리2의 실제 화면 위치 고려
     };
-    
+
     // bounds가 유효하지 않은 경우 처리
     if (isNaN(bounds.minX) || isNaN(bounds.maxX) || isNaN(bounds.minY) || isNaN(bounds.maxY)) {
       console.warn('Invalid bounds detected');
@@ -507,7 +534,7 @@ class SkillTreeSimulator {
 
     // 계산된 경계값 캐싱
     this._treeBounds = bounds;
-    
+
     // 변환 적용
     this.applyTreeTransform(bounds);
   }
@@ -515,28 +542,28 @@ class SkillTreeSimulator {
   applyTreeTransform(bounds) {
     const width = 1920;  // 고정된 viewBox 크기 사용
     const height = 1080;
-    
+
     const treeWidth = bounds.maxX - bounds.minX + 100;
     const treeHeight = bounds.maxY - bounds.minY + 100;
-    
+
     // 0으로 나누는 것을 방지
     if (treeWidth === 0 || treeHeight === 0) {
       console.warn('Invalid tree dimensions');
       return;
     }
-    
+
     const scaleX = width / treeWidth;
     const scaleY = height / treeHeight;
     const scale = Math.min(scaleX, scaleY, 1);
-    
+
     const centerX = (bounds.maxX + bounds.minX) / 2;
     const centerY = (bounds.maxY + bounds.minY) / 2;
-    
+
     const transform = d3.zoomIdentity
       .translate(width / 2, height / 2)
       .scale(scale)
       .translate(-centerX, -centerY);
-    
+
     this.svg
       .transition()
       .duration(750)
@@ -559,16 +586,16 @@ class SkillTreeSimulator {
     // 활성화된 노드들의 라인 ID 수집
     const activeLineIds = new Set();
     const potentialLineIds = new Set();
-    
+
     skillNodes.forEach(node => {
       if (node.active) {
         // 활성화된 노드의 연결선 처리
         node.connectedLines?.forEach(lineId => {
           // 연결된 다른 노드 찾기
-          const connectedNode = skillNodes.find(n => 
+          const connectedNode = skillNodes.find(n =>
             n.id !== node.id && n.connectedLines?.includes(lineId)
           );
-          
+
           if (connectedNode) {
             if (connectedNode.active) {
               // 양쪽 다 활성화된 경우
@@ -586,8 +613,8 @@ class SkillTreeSimulator {
     const adjustedLineNodes = lineNodes.map(line => ({
       ...line,
       displayY: line.skillSet === 'skill2' ? line.y + skill1MaxY : line.y,
-      lineState: activeLineIds.has(line.id) ? 'active' : 
-                 potentialLineIds.has(line.id) ? 'potential' : 'hidden'
+      lineState: activeLineIds.has(line.id) ? 'active' :
+        potentialLineIds.has(line.id) ? 'potential' : 'hidden'
     }));
 
     // 모든 노드의 y좌표 조정
@@ -681,16 +708,16 @@ class SkillTreeSimulator {
     // 요소 업데이트
     const elements = this.container.selectAll('.element')
       .data(allNodes, d => d.id);
-    
+
     elements.exit().remove();
-    
+
     // 기존 요소의 업데이트
     elements
       .attr('class', d => `element ${d.type} ${d.skillSet}${d.active ? ' active' : ''}`)
       .attr('transform', d => `translate(${d.x}, ${d.displayY})`);
 
     // 기존 요소의 use 요소 업데이트
-    elements.each(function(d) {
+    elements.each(function (d) {
       const element = d3.select(this);
       if (d.type === 'line') {
         element.selectAll('use')
@@ -775,18 +802,18 @@ class SkillTreeSimulator {
       .on('mousemove', (event, d) => {
         if (d.type === 'node') {
           this.showTooltip(event, d);
-          
+
           // 드래그 거리 계산
           if (event.buttons === 1) {  // 좌클릭 중일 때만
             const dx = event.clientX - this.dragStartPos.x;
             const dy = event.clientY - this.dragStartPos.y;
             const distance = Math.sqrt(dx * dx + dy * dy);
-            
+
             if (distance > this.dragThreshold) {
               this.isDragging = true;
             }
           }
-          
+
           // 우클릭 드래그 중이면 노드 토글
           if (this.isRightDragging) {
             const originalNode = this.nodes.find(n => n.id === d.id);
@@ -864,7 +891,7 @@ class SkillTreeSimulator {
       });
 
     // use 요소 생성
-    elementEnter.each(function(d) {
+    elementEnter.each(function (d) {
       const element = d3.select(this);
       if (d.type === 'line') {
         const isHorizontal = d.width / d.imageClip.width > d.height / d.imageClip.height;
@@ -957,13 +984,13 @@ class SkillTreeSimulator {
       name = node.name;
       description = '';
     }
-    
+
     tooltip.html(`
       <strong>${name}</strong>
       <div style="white-space: pre-wrap;">${description}</div>
       <div class="cost">소모 포인트: ${node.cost}</div>
     `);
-    
+
     const tooltipElement = tooltip.node();
     const mouseX = event.pageX;
     const mouseY = event.pageY;
@@ -971,18 +998,18 @@ class SkillTreeSimulator {
     const tooltipHeight = tooltipElement.offsetHeight;
     const windowWidth = window.innerWidth;
     const windowHeight = window.innerHeight;
-    
+
     let left = mouseX + 10;
     let top = mouseY + 10;
-    
+
     if (left + tooltipWidth > windowWidth) {
       left = mouseX - tooltipWidth - 10;
     }
-    
+
     if (top + tooltipHeight > windowHeight) {
       top = mouseY - tooltipHeight - 10;
     }
-    
+
     tooltip
       .style('left', `${left}px`)
       .style('top', `${top}px`)
@@ -998,9 +1025,9 @@ class SkillTreeSimulator {
     if (targetNode.id === '101001' || targetNode.id === '201001') return null;
 
     // 이 노드에 의존하는 활성화된 노드들 찾기
-    const dependentNodes = Array.from(this.nodeMap.values()).filter(n => 
-      n.active && 
-      n.id !== targetNode.id && 
+    const dependentNodes = Array.from(this.nodeMap.values()).filter(n =>
+      n.active &&
+      n.id !== targetNode.id &&
       n.required.includes(targetNode.id)
     );
 
@@ -1011,7 +1038,7 @@ class SkillTreeSimulator {
     nodesToDeactivate.add(targetNode.id);
 
     const startNodeId = targetNode.id.startsWith('1') ? '101001' : '201001';
-    
+
     // 의존하는 노드들 중 대체 경로가 없는 노드들을 찾아서 비활성화 목록에 추가
     dependentNodes.forEach(depNode => {
       // 시작 노드는 건너뛰기
@@ -1035,12 +1062,12 @@ class SkillTreeSimulator {
     for (const neighborId of this.adjList.get(node.id)) {
       const neighborNode = this.nodeMap.get(neighborId);
       // 시작 노드는 건너뛰기
-      if (neighborNode && 
-          neighborNode.id !== '101001' && 
-          neighborNode.id !== '201001' && 
-          neighborNode.active && 
-          !nodesToDeactivate.has(neighborId) && 
-          neighborNode.required.includes(node.id)) {
+      if (neighborNode &&
+        neighborNode.id !== '101001' &&
+        neighborNode.id !== '201001' &&
+        neighborNode.active &&
+        !nodesToDeactivate.has(neighborId) &&
+        neighborNode.required.includes(node.id)) {
         const hasAlternatePath = this.hasPathToStart(neighborNode, startNodeId, nodesToDeactivate);
         if (!hasAlternatePath) {
           nodesToDeactivate.add(neighborId);
@@ -1068,16 +1095,16 @@ class SkillTreeSimulator {
       // 인접 리스트를 사용하여 연결된 노드들 탐색
       for (const neighborId of this.adjList.get(currentId)) {
         const neighborNode = this.nodeMap.get(neighborId);
-        if (neighborNode && 
-            neighborNode.active && 
-            !visited.has(neighborId) && 
-            currentNode.required.includes(neighborId)) {
+        if (neighborNode &&
+          neighborNode.active &&
+          !visited.has(neighborId) &&
+          currentNode.required.includes(neighborId)) {
           queue.push(neighborId);
           visited.add(neighborId);
         }
       }
     }
-    
+
     return false;  // 경로를 찾지 못함
   }
 
@@ -1172,25 +1199,25 @@ class SkillTreeSimulator {
   findShortestPathToActiveNode(targetNode) {
     // 시작 노드 ID
     const startNodeId = targetNode.id.startsWith('1') ? '101001' : '201001';
-    
+
     // BFS를 위한 큐
     const queue = [];
     // 방문한 노드 추적
     const visited = new Set();
     // 경로 추적을 위한 맵
     const parent = new Map();
-    
+
     // 시작점에서 역방향으로 BFS 시작
     queue.push(targetNode.id);
     visited.add(targetNode.id);
-    
+
     while (queue.length > 0) {
       const currentId = queue.shift();
       const currentNode = this.nodeMap.get(currentId);
-      
+
       // 현재 노드가 존재하지 않으면 건너뛰기
       if (!currentNode) continue;
-      
+
       // 현재 노드가 활성화되어 있거나 시작 노드인 경우
       if (currentNode.active || currentId === startNodeId) {
         // 경로 재구성
@@ -1201,15 +1228,15 @@ class SkillTreeSimulator {
           nodeId = parent.get(nodeId);
         }
         path.push(targetNode.id);
-        
+
         // 시작 노드는 이미 활성화되어 있으므로 제외
         if (path[0] === startNodeId) {
           path.shift();
         }
-        
+
         return path;
       }
-      
+
       // 인접 리스트를 사용하여 연결된 노드들 탐색
       for (const neighborId of this.adjList.get(currentId)) {
         if (!visited.has(neighborId)) {
@@ -1223,7 +1250,7 @@ class SkillTreeSimulator {
         }
       }
     }
-    
+
     return null;  // 경로를 찾지 못한 경우
   }
 
@@ -1283,8 +1310,8 @@ class SkillTreeSimulator {
         let lineState = 'hidden';
         if (node.active && connectedNode.active) {
           lineState = 'active';
-        } else if ((node.active && this.canActivateNode(connectedNode)) || 
-                   (connectedNode.active && this.canActivateNode(node))) {
+        } else if ((node.active && this.canActivateNode(connectedNode)) ||
+          (connectedNode.active && this.canActivateNode(node))) {
           lineState = 'potential';
         }
 
@@ -1311,10 +1338,10 @@ class SkillTreeSimulator {
 
   getSkill1MaxY() {
     if (this._skill1MaxY === null) {
-      const skill1Nodes = this.nodes.filter(node => 
+      const skill1Nodes = this.nodes.filter(node =>
         node.type === 'background' && node.skillSet === 'skill1'
       );
-      this._skill1MaxY = Math.max(...skill1Nodes.map(node => 
+      this._skill1MaxY = Math.max(...skill1Nodes.map(node =>
         node.y + node.imageClip.height
       ));
     }
@@ -1324,9 +1351,9 @@ class SkillTreeSimulator {
   deactivateAndCleanup(node) {
     const deactivatedNodes = new Set();
     deactivatedNodes.add(node.id);
-    
+
     const affectedNodes = this.cleanupDisconnectedNodes(deactivatedNodes);
-    
+
     // 영향받은 노드들만 시각적으로 업데이트
     affectedNodes.forEach(nodeId => {
       const node = this.nodes.find(n => n.id === nodeId);
@@ -1334,14 +1361,14 @@ class SkillTreeSimulator {
         this.updateNodeVisuals(node);
       }
     });
-    
+
     this.updatePointsDisplay();
   }
 
   cleanupDisconnectedNodes(deactivatedNodes) {
     const startNodes = ['101001', '201001'];
     const affectedNodes = new Set(deactivatedNodes);
-    
+
     const activeNodes = Array.from(this.nodeMap.values()).filter(
       n => n.active && !deactivatedNodes.has(n.id) && n.type === 'node'
     );
@@ -1380,11 +1407,11 @@ class SkillTreeSimulator {
   canActivateNode(node) {
     // 시작 노드는 항상 활성화 가능
     if (node.id === '101001' || node.id === '201001') return true;
-    
+
     // 필요한 포인트 확인
     const points = node.id.startsWith('1') ? this.firstAwakenPoints : this.secondAwakenPoints;
     if (points.used + node.cost > points.total) return false;
-    
+
     // 선행 노드 확인
     return node.required.some(reqId => {
       const requiredNode = this.nodeMap.get(reqId);
@@ -1395,9 +1422,9 @@ class SkillTreeSimulator {
   canDeactivateNode(node) {
     // 시작 노드는 비활성화 불가
     if (node.id === '101001' || node.id === '201001') return false;
-    
+
     // 이 노드에 의존하는 활성화된 노드들 찾기
-    const dependentNodes = Array.from(this.nodeMap.values()).filter(n => 
+    const dependentNodes = Array.from(this.nodeMap.values()).filter(n =>
       n.active && // 활성화된 노드만 체크
       n.id !== node.id && // 자기 자신 제외
       n.required.includes(node.id) // 현재 노드를 필요로 하는 노드
@@ -1416,7 +1443,7 @@ class SkillTreeSimulator {
       changed = false;
       for (const n of this.nodeMap.values()) {
         if (n.active && n.id !== node.id && !connectedNodes.has(n.id)) {
-          const isConnected = n.required.some(reqId => 
+          const isConnected = n.required.some(reqId =>
             reqId !== node.id && connectedNodes.has(reqId)
           );
           if (isConnected) {
@@ -1436,7 +1463,7 @@ class SkillTreeSimulator {
     node.active = true;  // 상태 변경
     const points = node.id.startsWith('1') ? this.firstAwakenPoints : this.secondAwakenPoints;
     points.used += node.cost;
-    
+
     // 포인트가 0이 되거나 0에서 변경되는 경우 모든 연결선 업데이트
     if (points.used === points.total || prevPoints === points.total) {
       this.updateAllConnectedLines();
@@ -1449,7 +1476,7 @@ class SkillTreeSimulator {
     node.active = false;  // 상태 변경
     const points = node.id.startsWith('1') ? this.firstAwakenPoints : this.secondAwakenPoints;
     points.used -= node.cost;
-    
+
     // 포인트가 0이 되거나 0에서 변경되는 경우 모든 연결선 업데이트
     if (points.used === points.total || prevPoints === points.total) {
       this.updateAllConnectedLines();
@@ -1462,14 +1489,14 @@ class SkillTreeSimulator {
     const skillNodes = this.nodes.filter(node => node.type === 'node');
     const activeLineIds = new Set();
     const potentialLineIds = new Set();
-    
+
     skillNodes.forEach(node => {
       if (node.active && node.connectedLines) {
         node.connectedLines.forEach(lineId => {
-          const connectedNode = skillNodes.find(n => 
+          const connectedNode = skillNodes.find(n =>
             n.id !== node.id && n.connectedLines?.includes(lineId)
           );
-          
+
           if (connectedNode) {
             if (connectedNode.active) {
               activeLineIds.add(lineId);
@@ -1517,13 +1544,13 @@ class SkillTreeSimulator {
   updatePointsDisplay() {
     const firstAwakenElement = d3.select('#firstAwakenPoints');
     const secondAwakenElement = d3.select('#secondAwakenPoints');
-    
+
     firstAwakenElement.html(`
       <div class="points-title">1차 각성</div>
       <div class="points-value">${this.firstAwakenPoints.total - this.firstAwakenPoints.used}</div>
       <div class="points-total">/ ${this.firstAwakenPoints.total}</div>
     `);
-    
+
     secondAwakenElement.html(`
       <div class="points-title">2차 각성</div>
       <div class="points-value">${this.secondAwakenPoints.total - this.secondAwakenPoints.used}</div>
@@ -1602,7 +1629,7 @@ class SkillTreeSimulator {
         while ((match = statPattern.exec(line)) !== null) {
           const [, type, value, unit] = match;
           const trimmedType = type.trim();
-          
+
           // 스킬 레벨 처리
           if (trimmedType.endsWith('스킬 레벨')) {
             const skillNameMatch = trimmedType.match(/\<(.+?)\>/);  // <스킬명> 패턴 매칭
@@ -1650,19 +1677,19 @@ class SkillTreeSimulator {
       // 스킬 레벨이 있는 경우 최상단에 표시
       if (a[0].includes('스킬 레벨') && !b[0].includes('스킬 레벨')) return -1;
       if (!a[0].includes('스킬 레벨') && b[0].includes('스킬 레벨')) return 1;
-      
+
       // 먼저 이름순으로 정렬
       const aName = a[0].replace('%', '');  // % 제거하고 비교
       const bName = b[0].replace('%', '');
       const nameCompare = aName.localeCompare(bName);
       if (nameCompare !== 0) return nameCompare;
-      
+
       // 이름이 같은 경우 % 단위가 있는 것을 위로
       const aHasPercent = a[0].endsWith('%');
       const bHasPercent = b[0].endsWith('%');
       if (aHasPercent && !bHasPercent) return -1;
       if (!aHasPercent && bHasPercent) return 1;
-      
+
       return 0;
     });
 
@@ -1721,7 +1748,7 @@ class SkillTreeSimulator {
       }
       // Ctrl+Y 또는 Ctrl+Shift+Z: 되돌리기
       else if ((event.ctrlKey && event.key.toLowerCase() === 'y') ||
-               (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'z')) {
+        (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'z')) {
         event.preventDefault();
         this.redo();
       }
@@ -1750,13 +1777,13 @@ class SkillTreeSimulator {
         node.active = false;
       }
     });
-    
+
     this.firstAwakenPoints.used = 0;
     this.secondAwakenPoints.used = 0;
-    
+
     // 트리 초기화 시 경계값 캐시만 초기화 (skill1MaxY는 유지)
     this._treeBounds = null;
-    
+
     this.updateVisuals();
     this.saveToURL();
     this.showNotification('스킬 트리가 초기화되었습니다.', 'info');
@@ -1768,7 +1795,7 @@ class SkillTreeSimulator {
       this.isInternalHashChange = false;
       return;
     }
-    
+
     // 외부에서의 URL 변경인 경우 상태 로드
     this.loadFromURL();
   }
@@ -1780,7 +1807,7 @@ class SkillTreeSimulator {
 
     // 비트 배열 생성 (8비트 단위)
     const bits = new Uint8Array(Math.ceil(nodesList.length / 8));
-    
+
     nodesList.forEach((node, index) => {
       if (node.active) {
         const byteIndex = Math.floor(index / 8);
@@ -1810,7 +1837,7 @@ class SkillTreeSimulator {
 
   loadFromURL() {
     const hash = window.location.hash.slice(1);
-    
+
     // 노드만 필터링
     const nodesList = this.nodes
       .filter(node => node.type === 'node');
@@ -1830,13 +1857,13 @@ class SkillTreeSimulator {
       const normalizedHash = hash
         .replace(/-/g, '+')  // URL 안전 문자를 원래 Base64 문자로 복원
         .replace(/_/g, '/');
-      
+
       // 패딩 추가
       const padding = normalizedHash.length % 4;
-      const paddedHash = padding ? 
-        normalizedHash + '='.repeat(4 - padding) : 
+      const paddedHash = padding ?
+        normalizedHash + '='.repeat(4 - padding) :
         normalizedHash;
-      
+
       // 비트 배열로 변환
       const bits = new Uint8Array(
         atob(paddedHash)
@@ -1847,10 +1874,10 @@ class SkillTreeSimulator {
       // 노드 상태 복원
       nodesList.forEach((node, index) => {
         if (node.id === '101001' || node.id === '201001') return;  // 시작 노드는 건너뜀
-        
+
         const byteIndex = Math.floor(index / 8);
         const bitIndex = index % 8;
-        
+
         if (byteIndex < bits.length) {
           node.active = (bits[byteIndex] & (1 << bitIndex)) !== 0;
         }
@@ -1859,7 +1886,7 @@ class SkillTreeSimulator {
       // 포인트 재계산
       this.firstAwakenPoints.used = 0;
       this.secondAwakenPoints.used = 0;
-      
+
       this.nodes.forEach(node => {
         if (node.active && node.type === 'node' && node.id !== '101001' && node.id !== '201001') {
           const points = node.id.startsWith('1') ? this.firstAwakenPoints : this.secondAwakenPoints;
@@ -1870,7 +1897,7 @@ class SkillTreeSimulator {
       // 시각화 업데이트
       this.drawNodes();
       this.updatePointsDisplay();
-      
+
     } catch (error) {
       console.error('URL 해시 디코딩 중 오류 발생:', error);
       this.showNotification('잘못된 URL 형식입니다.', 'error');
@@ -1883,7 +1910,7 @@ class SkillTreeSimulator {
     const notification = document.createElement('div');
     notification.className = `notification ${type}`;
     notification.style.pointerEvents = 'none';  // 마우스 이벤트를 뒤로 전달
-    
+
     let icon;
     switch (type) {
       case 'success':
@@ -1898,17 +1925,17 @@ class SkillTreeSimulator {
       default:
         icon = 'info-circle';
     }
-    
+
     notification.innerHTML = `
       <i class="fas fa-${icon}"></i>
       <span>${message}</span>
     `;
-    
+
     // 컨테이너도 pointer-events: none 설정
     container.style.pointerEvents = 'none';
-    
+
     container.appendChild(notification);
-    
+
     setTimeout(() => {
       notification.remove();
       // 컨테이너에 더 이상 알림이 없으면 pointer-events 제거
@@ -1966,14 +1993,14 @@ class SkillTreeSimulator {
       nodeData.active = node.id === '101001' || node.id === '201001';
       nodeData.required = [];
       nodeData.connectedLines = node.LINE_INSTANCE || [];
-      
+
       // REQUIRE_SLOT이 문자열인 경우 배열로 변환
       if (typeof node.REQUIRE_SLOT === 'string' && node.REQUIRE_SLOT) {
         nodeData.required = [node.REQUIRE_SLOT];
       } else if (Array.isArray(node.REQUIRE_SLOT)) {
         nodeData.required = node.REQUIRE_SLOT;
       }
-      
+
       // 툴팁 정보를 Map으로 저장
       nodeData.tooltip = new Map();
       Object.entries(node).forEach(([key, value]) => {
@@ -2089,12 +2116,12 @@ class SkillTreeSimulator {
       if (this.statsContainer) {
         this.statsContainer.classList.toggle('expanded');
         const isExpanded = this.statsContainer.classList.contains('expanded');
-          
+
         this.toggleStatsButton.innerHTML = `
           <i class="fas fa-${isExpanded ? 'chevron-up' : 'chevron-down'}"></i>
           적용 능력치
         `;
-        
+
         if (isExpanded) {
           this.updateStatsDisplay();
         }
