@@ -133,8 +133,8 @@ class SkillTreeSimulator {
   async loadSkillData() {
     try {
       const [skill1Response, skill2Response] = await Promise.all([
-        fetch('/json/skill1.json'),
-        fetch('/json/skill2.json')
+        fetch('assets/skill1.json'),
+        fetch('assets/skill2.json')
       ]);
       
       const skill1Data = await skill1Response.json();
@@ -1878,7 +1878,7 @@ class SkillTreeSimulator {
       y: parseInt(node.COOP_Y) || 0,
       width: parseInt(node.OBJECT_SIZE_X) || 0,
       height: parseInt(node.OBJECT_SIZE_Y) || 0,
-      imageUrl: `/img/skill/${node.IMAGE_FILENAME}`,
+      imageUrl: `assets/${node.IMAGE_FILENAME}`,
       imageClip: {
         x: parseInt(node.IMAGE_X) || 0,
         y: parseInt(node.IMAGE_Y) || 0,
