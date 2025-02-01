@@ -1,12 +1,19 @@
-console.log('Loaded version: 1.0.11');
+console.log('Loaded version 1.0.12');
 
 class SkillTreeSimulator {
   constructor() {
-    // GitHub Pages 여부 확인
-    this.isGitHubPages = window.location.href.includes('alfm201.github.io/awaken-skill-tree');
-    this.baseUrl = this.isGitHubPages 
-      ? 'https://raw.githubusercontent.com/alfm201/awaken-skill-tree/main/assets'
-      : '';
+    // 환경에 따른 기본 URL 설정
+    const currentUrl = window.location.href;
+    this.isGitHubPages = currentUrl.includes('alfm201.github.io/awaken-skill-tree');
+    this.isLocalFile = currentUrl.startsWith('file://');
+    
+    if (this.isGitHubPages) {
+      this.baseUrl = 'https://raw.githubusercontent.com/alfm201/awaken-skill-tree/main/assets';
+    } else if (this.isLocalFile) {
+      this.baseUrl = './assets';
+    } else {
+      this.baseUrl = '';
+    }
 
     // 로딩 인디케이터 초기화
     this.loadingIndicator = document.createElement('div');
@@ -145,13 +152,22 @@ class SkillTreeSimulator {
 
   async loadSkillData() {
     try {
+      let skill1Url, skill2Url;
+      
+      if (this.isGitHubPages) {
+        skill1Url = `${this.baseUrl}/skill1.json`;
+        skill2Url = `${this.baseUrl}/skill2.json`;
+      } else if (this.isLocalFile) {
+        skill1Url = `${this.baseUrl}/skill1.json`;
+        skill2Url = `${this.baseUrl}/skill2.json`;
+      } else {
+        skill1Url = '/json/skill1.json';
+        skill2Url = '/json/skill2.json';
+      }
+
       const [skill1Response, skill2Response] = await Promise.all([
-        fetch(this.isGitHubPages 
-          ? `${this.baseUrl}/skill1.json`
-          : '/json/skill1.json'),
-        fetch(this.isGitHubPages 
-          ? `${this.baseUrl}/skill2.json`
-          : '/json/skill2.json')
+        fetch(skill1Url),
+        fetch(skill2Url)
       ]);
       
       const skill1Data = await skill1Response.json();
@@ -1904,6 +1920,15 @@ class SkillTreeSimulator {
 
   createNodeData(node) {
     // 공통 데이터
+    let imageUrl;
+    if (this.isGitHubPages) {
+      imageUrl = `${this.baseUrl}/${node.IMAGE_FILENAME.toUpperCase()}`;
+    } else if (this.isLocalFile) {
+      imageUrl = `${this.baseUrl}/${node.IMAGE_FILENAME}`;
+    } else {
+      imageUrl = `/img/skill/${node.IMAGE_FILENAME}`;
+    }
+
     const nodeData = {
       id: node.INSTANCEID,
       name: node.PARENT || '',
@@ -1911,9 +1936,7 @@ class SkillTreeSimulator {
       y: parseInt(node.COOP_Y) || 0,
       width: parseInt(node.OBJECT_SIZE_X) || 0,
       height: parseInt(node.OBJECT_SIZE_Y) || 0,
-      imageUrl: this.isGitHubPages 
-        ? `${this.baseUrl}/${node.IMAGE_FILENAME.toUpperCase()}`
-        : `/img/skill/${node.IMAGE_FILENAME}`,
+      imageUrl: imageUrl,
       imageClip: {
         x: parseInt(node.IMAGE_X) || 0,
         y: parseInt(node.IMAGE_Y) || 0,
