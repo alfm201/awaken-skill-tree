@@ -1,3 +1,5 @@
+console.log('Loaded version: 1.0.9');
+
 class SkillTreeSimulator {
   constructor() {
     // GitHub Pages 여부 확인
