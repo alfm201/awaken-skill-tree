@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>라테일 각성 트리</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+  <div class="container">
+    <div class="controls-container">
+      <div class="controls left">
+        <button id="resetButton" class="reset-button">
+          <i class="fas fa-undo"></i>
+          <span>초기화</span>
+        </button>
+      </div>
+      <div class="controls right">
+        <div id="pointsDisplay">
+          <div id="firstAwakenPoints" class="points-container"></div>
+          <div id="secondAwakenPoints" class="points-container"></div>
+        </div>
+      </div>
+    </div>
+    <div class="skill-tree">
+      <svg id="skillTreeSvg"></svg>
+      <div id="tooltip" class="tooltip" style="display: none;"></div>
+    </div>
+  </div>
+
+  <!-- 알림 컨테이너 -->
+  <div id="notificationContainer"></div>
+  <div id="jobSelectorContainer"></div>
+  <div id="pointsContainer">
+    <div id="statsContainer" class="stats-container">
+      <button id="toggleStats" class="toggle-button">
+        <i class="fas fa-chevron-down"></i>
+        적용 능력치
+      </button>
+      <div class="stats-wrapper">
+        <div class="stats-tabs">
+          <div class="tab active" data-tab="all">전체</div>
+          <div class="tab" data-tab="first">1차 각성</div>
+          <div class="tab" data-tab="second">2차 각성</div>
+        </div>
+        <div class="stats-content"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://d3js.org/d3.v7.min.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
