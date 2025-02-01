@@ -1,5 +1,11 @@
 class SkillTreeSimulator {
   constructor() {
+    // GitHub Pages 여부 확인
+    this.isGitHubPages = window.location.href.includes('alfm201.github.io/awaken-skill-tree');
+    this.baseUrl = this.isGitHubPages 
+      ? 'https://raw.githubusercontent.com/alfm201/awaken-skill-tree/main/assets'
+      : '';
+
     // 로딩 인디케이터 초기화
     this.loadingIndicator = document.createElement('div');
     this.loadingIndicator.className = 'loading-indicator';
@@ -13,6 +19,11 @@ class SkillTreeSimulator {
     this.undoStack = [];
     this.redoStack = [];
     this.maxStackSize = 50;  // 최대 스택 크기
+
+    // 드래그 관련 상태 추가
+    this.isDragging = false;
+    this.dragStartPos = { x: 0, y: 0 };
+    this.dragThreshold = 5;  // 드래그로 인식할 최소 이동 거리
 
     // DOM 요소 초기화
     this.statsContainer = document.getElementById('statsContainer');
@@ -133,8 +144,12 @@ class SkillTreeSimulator {
   async loadSkillData() {
     try {
       const [skill1Response, skill2Response] = await Promise.all([
-        fetch('https://raw.githubusercontent.com/alfm201/awaken-skill-tree/main/assets/skill1.json'),
-        fetch('https://raw.githubusercontent.com/alfm201/awaken-skill-tree/main/assets/skill2.json')
+        fetch(this.isGitHubPages 
+          ? `${this.baseUrl}/skill1.json`
+          : '/json/skill1.json'),
+        fetch(this.isGitHubPages 
+          ? `${this.baseUrl}/skill2.json`
+          : '/json/skill2.json')
       ]);
       
       const skill1Data = await skill1Response.json();
@@ -733,14 +748,28 @@ class SkillTreeSimulator {
               this.saveToURL();
             }
           }
+        } else if (event.button === 0) {  // 좌클릭
+          // 드래그 시작 위치 저장
+          this.isDragging = false;
+          this.dragStartPos = { x: event.clientX, y: event.clientY };
         }
       })
-      .on('mouseover', (event, d) => {
+      .on('mousemove', (event, d) => {
         if (d.type === 'node') {
           this.showTooltip(event, d);
-          d3.select(event.currentTarget).style('cursor', 'pointer');
           
-          // 우클릭 드래그 중이면 노드 토글 (자동 활성화/비활성화 없이)
+          // 드래그 거리 계산
+          if (event.buttons === 1) {  // 좌클릭 중일 때만
+            const dx = event.clientX - this.dragStartPos.x;
+            const dy = event.clientY - this.dragStartPos.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance > this.dragThreshold) {
+              this.isDragging = true;
+            }
+          }
+          
+          // 우클릭 드래그 중이면 노드 토글
           if (this.isRightDragging) {
             const originalNode = this.nodes.find(n => n.id === d.id);
             if (originalNode.active) {
@@ -769,17 +798,9 @@ class SkillTreeSimulator {
           }
         }
       })
-      .on('mousemove', (event, d) => {
-        if (d.type === 'node') {
-          this.showTooltip(event, d);
-        }
-      })
-      .on('mouseout', (event) => {
-        this.hideTooltip();
-        d3.select(event.currentTarget).style('cursor', 'default');
-      })
       .on('click', (event, d) => {
-        if (d.type === 'node') {
+        // 드래그가 아닌 경우에만 클릭 이벤트 처리
+        if (d.type === 'node' && !this.isDragging) {
           const element = d3.select(event.currentTarget);
           // 원본 노드 객체 찾기
           const originalNode = this.nodes.find(n => n.id === d.id);
@@ -812,6 +833,16 @@ class SkillTreeSimulator {
               });
           }
         }
+      })
+      .on('mouseover', (event, d) => {
+        if (d.type === 'node') {
+          this.showTooltip(event, d);
+          d3.select(event.currentTarget).style('cursor', 'pointer');
+        }
+      })
+      .on('mouseout', (event) => {
+        this.hideTooltip();
+        d3.select(event.currentTarget).style('cursor', 'default');
       });
 
     // use 요소 생성
@@ -1878,7 +1909,9 @@ class SkillTreeSimulator {
       y: parseInt(node.COOP_Y) || 0,
       width: parseInt(node.OBJECT_SIZE_X) || 0,
       height: parseInt(node.OBJECT_SIZE_Y) || 0,
-      imageUrl: `https://raw.githubusercontent.com/alfm201/awaken-skill-tree/main/assets/${node.IMAGE_FILENAME.toUpperCase()}`,
+      imageUrl: this.isGitHubPages 
+        ? `${this.baseUrl}/img/${node.IMAGE_FILENAME}`
+        : `/img/skill/${node.IMAGE_FILENAME}`,
       imageClip: {
         x: parseInt(node.IMAGE_X) || 0,
         y: parseInt(node.IMAGE_Y) || 0,
@@ -2065,3 +2098,4 @@ class SkillTreeSimulator {
 window.addEventListener('DOMContentLoaded', () => {
   window.skillTreeSimulator = new SkillTreeSimulator();
 });
+
