@@ -1,4 +1,4 @@
-console.log('Loaded version: 1.0.10');
+console.log('Loaded version: 1.0.11');
 
 class SkillTreeSimulator {
   constructor() {
@@ -1912,7 +1912,7 @@ class SkillTreeSimulator {
       width: parseInt(node.OBJECT_SIZE_X) || 0,
       height: parseInt(node.OBJECT_SIZE_Y) || 0,
       imageUrl: this.isGitHubPages 
-        ? `${this.baseUrl}/img/${node.IMAGE_FILENAME.toUpperCase()}`
+        ? `${this.baseUrl}/${node.IMAGE_FILENAME.toUpperCase()}`
         : `/img/skill/${node.IMAGE_FILENAME}`,
       imageClip: {
         x: parseInt(node.IMAGE_X) || 0,
