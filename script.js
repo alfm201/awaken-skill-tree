@@ -1,4 +1,4 @@
-console.log('Loaded version 1.0.13');
+console.log('Loaded version 1.0.14');
 
 class SkillTreeSimulator {
   constructor() {
@@ -813,25 +813,15 @@ class SkillTreeSimulator {
               this.isDragging = true;
             }
           }
-
-          // 우클릭 드래그 중이면 노드 토글
-          if (this.isRightDragging) {
-            const originalNode = this.nodes.find(n => n.id === d.id);
-            if (originalNode.active) {
-              // 이미 활성화된 노드는 직접 비활성화 가능한지 확인
-              if (this.canDeactivateNode(originalNode)) {
-                this.deactivateNode(originalNode);
-                // UI 업데이트
-                d.active = originalNode.active;
-                const element = d3.select(event.currentTarget);
-                element.classed('active', d.active);
-                this.updateNodeVisuals(originalNode);
-                this.updatePointsDisplay();
-                this.saveToURL();
-              }
-            } else if (this.canActivateNode(originalNode)) {
-              // 비활성화된 노드는 활성화 가능한지 확인
-              this.activateNode(originalNode);
+        }
+      })
+      .on('mouseenter', (event, d) => {
+        if (d.type === 'node' && this.isRightDragging) {
+          const originalNode = this.nodes.find(n => n.id === d.id);
+          if (originalNode.active) {
+            // 이미 활성화된 노드는 직접 비활성화 가능한지 확인
+            if (this.canDeactivateNode(originalNode)) {
+              this.deactivateNode(originalNode);
               // UI 업데이트
               d.active = originalNode.active;
               const element = d3.select(event.currentTarget);
@@ -840,6 +830,16 @@ class SkillTreeSimulator {
               this.updatePointsDisplay();
               this.saveToURL();
             }
+          } else if (this.canActivateNode(originalNode)) {
+            // 비활성화된 노드는 활성화 가능한지 확인
+            this.activateNode(originalNode);
+            // UI 업데이트
+            d.active = originalNode.active;
+            const element = d3.select(event.currentTarget);
+            element.classed('active', d.active);
+            this.updateNodeVisuals(originalNode);
+            this.updatePointsDisplay();
+            this.saveToURL();
           }
         }
       })
