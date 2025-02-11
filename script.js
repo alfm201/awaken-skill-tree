@@ -1,4 +1,4 @@
-console.log('Loaded version 1.0.14');
+console.log('Loaded version 1.0.15');
 
 class SkillTreeSimulator {
   constructor() {
@@ -51,6 +51,16 @@ class SkillTreeSimulator {
       total: 115,
       used: 0
     };
+    
+    this.pointsDisplayMode = 'used';
+    const firstPointsElem = document.getElementById('firstAwakenPoints');
+    const secondPointsElem = document.getElementById('secondAwakenPoints');
+    if (firstPointsElem) {
+      firstPointsElem.addEventListener('click', () => { this.togglePointsDisplay(); });
+    }
+    if (secondPointsElem) {
+      secondPointsElem.addEventListener('click', () => { this.togglePointsDisplay(); });
+    }
 
     this.nodes = [];
     this.nodeMap = new Map();  // 노드 ID를 키로 하는 Map
@@ -1544,16 +1554,22 @@ class SkillTreeSimulator {
   updatePointsDisplay() {
     const firstAwakenElement = d3.select('#firstAwakenPoints');
     const secondAwakenElement = d3.select('#secondAwakenPoints');
-
+    let firstPointsValue, secondPointsValue;
+    if (this.pointsDisplayMode === 'used') {
+        firstPointsValue = this.firstAwakenPoints.used;
+        secondPointsValue = this.secondAwakenPoints.used;
+    } else {
+        firstPointsValue = this.firstAwakenPoints.total - this.firstAwakenPoints.used;
+        secondPointsValue = this.secondAwakenPoints.total - this.secondAwakenPoints.used;
+    }
     firstAwakenElement.html(`
       <div class="points-title">1차 각성</div>
-      <div class="points-value">${this.firstAwakenPoints.total - this.firstAwakenPoints.used}</div>
+      <div class="points-value">${firstPointsValue}</div>
       <div class="points-total">/ ${this.firstAwakenPoints.total}</div>
     `);
-
     secondAwakenElement.html(`
       <div class="points-title">2차 각성</div>
-      <div class="points-value">${this.secondAwakenPoints.total - this.secondAwakenPoints.used}</div>
+      <div class="points-value">${secondPointsValue}</div>
       <div class="points-total">/ ${this.secondAwakenPoints.total}</div>
     `);
 
@@ -2144,10 +2160,15 @@ class SkillTreeSimulator {
     this.currentTab = 'all';
     this.updateStatsDisplay();
   }
+
+  // 새로 추가: 포인트 표시 모드 토글 함수
+  togglePointsDisplay() {
+    this.pointsDisplayMode = this.pointsDisplayMode === 'used' ? 'remaining' : 'used';
+    this.updatePointsDisplay();
+  }
 }
 
 // 인스턴스 생성
 window.addEventListener('DOMContentLoaded', () => {
   window.skillTreeSimulator = new SkillTreeSimulator();
 });
-
