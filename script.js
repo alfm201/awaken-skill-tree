@@ -1637,7 +1637,7 @@ class SkillTreeSimulator {
       const remainingLines = lines.slice(1).filter(line => !line.trim().startsWith('☞'));  // 첫 행(Name) 제외 및 특수 효과 제외
 
       // 일반 능력치 패턴 매칭 (/ 기호가 포함된 경우도 처리)
-      const statPattern = /([가-힣A-Za-z\s\/\<\>]+)\s*([+-]\s*\d+\.?\d*)(%)?/g;
+      const statPattern = /([가-힣A-Za-z0-9\s\/<>\[\]【】]+)\s*([+-]\s*\d+(?:\.\d+)?)(%)?/g;
       let match;
 
       // 첫 행을 제외한 나머지 라인들에 대해서만 능력치 매칭
