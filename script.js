@@ -1,4 +1,4 @@
-console.log('Loaded version 1.0.15');
+console.log('Loaded version 1.0.16');
 
 class SkillTreeSimulator {
   constructor() {
@@ -48,7 +48,7 @@ class SkillTreeSimulator {
       used: 0
     };
     this.secondAwakenPoints = {
-      total: 115,
+      total: 117,
       used: 0
     };
     
